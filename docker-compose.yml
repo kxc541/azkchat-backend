@@ -1,0 +1,107 @@
+services:
+  backend:
+    build: ./backend
+    expose:
+      - "5000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - weaviate
+      - redis
+    profiles: ["_base"]
+
+  backend-dev:
+    extends:
+      service: backend
+    command: uvicorn app:app --host 0.0.0.0 --port 5000 --reload
+    ports:
+      - "5000:5000"
+    profiles: ["dev"]
+
+  backend-prod:
+    extends:
+      service: backend
+    command: uvicorn app:app --host 0.0.0.0 --port 5000 --workers 3
+    ports:
+      - "5000:5000"
+    profiles: ["prod"]
+
+  worker:
+    build: ./backend
+    command: rq worker --url redis://redis:6379
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+      - weaviate
+    profiles: ["dev", "prod"]
+
+  redis:
+    image: redis:alpine
+    expose:
+      - "6379"
+    profiles: ["dev", "prod"]
+
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    expose:
+      - "8080:8080"
+    environment:
+      - QUERY_DEFAULTS_LIMIT=25
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+      - DEFAULT_VECTORIZER_MODULE=text2vec-openai
+      - ENABLE_MODULES=text2vec-openai
+      - CLUSTER_HOSTNAME=node1
+    env_file:
+      - ./backend/.env
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    profiles: ["dev", "prod"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend-dev
+    profiles: ["dev"]
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/dist:/usr/share/nginx/html
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - backend-prod
+    profiles: ["prod"]
+
+  watchdog:
+    build: ./backend
+    command: python /app/watchdog.py
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+    profiles: ["dev", "prod"]
+    restart: always
+
+volumes:
+  weaviate_data:

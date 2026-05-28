@@ -1,0 +1,25 @@
+# Secrets
+.env
+*.env
+firebase_admin_sdk.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.npm/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads / generated files
+backend/temp_uploads/
+backend/images/

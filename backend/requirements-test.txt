@@ -1,0 +1,13 @@
+pytest
+structlog
+langchain-core==0.3.68
+langchain-community==0.3.27
+langchain-text-splitters==0.3.8
+python-docx==1.2.0
+fastapi==0.116.0
+httpx==0.28.1
+starlette==0.46.2
+boto3
+openai==0.28.0
+pydantic==2.11.7
+python-dotenv==1.1.1
